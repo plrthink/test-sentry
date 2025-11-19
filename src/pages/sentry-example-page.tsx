@@ -2,17 +2,10 @@ import Head from "next/head";
 import * as Sentry from "@sentry/nextjs";
 import { useState, useEffect } from "react";
 
-class SentryExampleFrontendError extends Error {
-  constructor(message: string | undefined) {
-    super(message);
-    this.name = "SentryExampleFrontendError";
-  }
-}
-
 export default function Page() {
   const [hasSentError, setHasSentError] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
-  
+
   useEffect(() => {
     async function checkConnectivity() {
       const result = await Sentry.diagnoseSdkConnectivity();
@@ -46,22 +39,28 @@ export default function Page() {
         <button
           type="button"
           onClick={async () => {
-            await Sentry.startSpan({
-              name: 'Example Frontend/Backend Span',
-              op: 'test'
-            }, async () => {
-              const res = await fetch("/api/sentry-example-api");
-              if (!res.ok) {
-                setHasSentError(true);
-              }
-            });
-            throw new SentryExampleFrontendError("This error is raised on the frontend of the example page.");
+            await Sentry.startSpan(
+              {
+                name: "Example Frontend/Backend Span",
+                op: "test",
+              },
+              async () => {
+                const res = await fetch("/api/sentry-example-api");
+                if (!res.ok) {
+                  setHasSentError(true);
+                }
+              },
+            );
+
+            // Simulate a realistic error: accessing property on undefined
+            // This is a common mistake that happens in production
+            const userData = undefined;
+            // @ts-expect-error - Intentionally accessing property on undefined to trigger error
+            console.log(userData.profile.name);
           }}
           disabled={!isConnected}
         >
-          <span>
-            Throw Sample Error
-          </span>
+          <span>Throw Sample Error</span>
         </button>
 
         {hasSentError ? (
