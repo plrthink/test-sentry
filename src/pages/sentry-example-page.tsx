@@ -9,10 +9,40 @@ export default function Page() {
   useEffect(() => {
     async function checkConnectivity() {
       const result = await Sentry.diagnoseSdkConnectivity();
-      setIsConnected(result !== 'sentry-unreachable');
+      setIsConnected(result !== "sentry-unreachable");
     }
     checkConnectivity();
   }, []);
+
+  // Named function to check if function names appear in Sentry stack traces
+  function processUserData(data: unknown) {
+    // @ts-expect-error - Intentionally accessing property on undefined to trigger error
+    return data.profile.name;
+  }
+
+  function fetchUserProfile() {
+    const userData = undefined;
+    return processUserData(userData);
+  }
+
+  async function handleTestError() {
+    await Sentry.startSpan(
+      {
+        name: "Example Frontend/Backend Span",
+        op: "test",
+      },
+      async () => {
+        const res = await fetch("/api/sentry-example-api");
+        if (!res.ok) {
+          setHasSentError(true);
+        }
+      },
+    );
+
+    // Call named functions to create a meaningful stack trace
+    // This will show if function names are preserved or uglified in production
+    fetchUserProfile();
+  }
 
   return (
     <div>
@@ -38,26 +68,7 @@ export default function Page() {
 
         <button
           type="button"
-          onClick={async () => {
-            await Sentry.startSpan(
-              {
-                name: "Example Frontend/Backend Span",
-                op: "test",
-              },
-              async () => {
-                const res = await fetch("/api/sentry-example-api");
-                if (!res.ok) {
-                  setHasSentError(true);
-                }
-              },
-            );
-
-            // Simulate a realistic error: accessing property on undefined
-            // This is a common mistake that happens in production
-            const userData = undefined;
-            // @ts-expect-error - Intentionally accessing property on undefined to trigger error
-            console.log(userData.profile.name);
-          }}
+          onClick={handleTestError}
           disabled={!isConnected}
         >
           <span>Throw Sample Error</span>
